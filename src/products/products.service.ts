@@ -5,7 +5,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from './entities/product.entity';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
-
+import { validate as isUUID } from 'uuid'
+import { QueryBuilder } from 'typeorm/browser';
+import { title } from 'process';
 @Injectable()
 export class ProductsService {
 
@@ -19,17 +21,6 @@ export class ProductsService {
   async create(createProductDto: CreateProductDto) {
     try {
 
-      // if(!createProductDto.slug){//si esto no existe
-      //   createProductDto.slug=createProductDto.title
-      //   .toLocaleLowerCase()
-      //   .replaceAll(' ','_')
-      //   .replaceAll("'",'')
-      // }else{
-      //   createProductDto.slug=createProductDto.slug
-      //   .toLocaleLowerCase()
-      //   .replaceAll(' ','_')
-      //   .replaceAll("'",'')
-      // }
       const product = this.productRepository.create(createProductDto)//crea la instancia del producot
       await this.productRepository.save(product);
 
@@ -41,33 +32,51 @@ export class ProductsService {
 
   }
 
-  findAll(paginationDto:PaginationDto) {
-    const {limit=10 , offset=0} = paginationDto
+  findAll(paginationDto: PaginationDto) {
+    const { limit = 10, offset = 0 } = paginationDto
     return this.productRepository.find({
-      take:limit,
-      skip:offset
+      take: limit,
+      skip: offset
     });
   }
 
-  async findOne(id: string) {
-    // let product: Product | null = null;
+  async findOne(term: string) {
+    let product: Product | null = null;
 
-    // if (!product) {
-    //   product = await this.productRepository.findOneBy({ id: id.toLocaleLowerCase() })
-    // }
+    if (isUUID(term)) {
+      product = await this.productRepository.findOneBy({ id: term })
+    } else {
 
+        const queryBuilder=this.productRepository.createQueryBuilder();
+        product = await queryBuilder
+          .where('LOWER(title) =:title or slug=:slug',{
+            title: term,
+            slug: term
+          }).getOne();
+    }
 
-    // if (!product) {
-    //   product = await this.productRepository.findOneBy({ slug: id.toLocaleLowerCase() })
-    // }
-    const product = await this.productRepository.findOneBy({ id });
-    if(!product) throw new NotFoundException(`Product with id ${id} not found`)
-   
+    if (!product)
+       throw new NotFoundException(`Product with id ${term} not found`)
+
     return product
   }
 
-  update(id: number, updateProductDto: UpdateProductDto) {
-    return `This action updates a #${id} product`;
+ async update(id: string, updateProductDto: UpdateProductDto) {
+    const product = await this.productRepository.preload({
+      //busca un producto por el id y adicionalemtne carga con todas las propiedades del updateProductoDto
+      id: id, 
+      ...updateProductDto
+    }); // prepara para la actualizacion
+    if(!product) throw new NotFoundException(`Product with id: ${id} not found`)
+    
+    try {
+      await this.productRepository.save(product)
+      
+    } catch (error) {
+      this.handleDBExceptions(error)
+      
+    }
+    return product
   }
 
   async remove(id: string) {

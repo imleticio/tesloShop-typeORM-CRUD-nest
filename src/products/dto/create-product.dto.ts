@@ -12,6 +12,8 @@ export class CreateProductDto {
     @IsOptional()
     price?: number;
 
+    
+
 
     @IsString()
     @IsOptional()
@@ -34,6 +36,13 @@ export class CreateProductDto {
 
     @IsIn(['men','women','unisex','kids'])
     gender:string
+
+    @IsOptional()
+    @IsArray()
+    @IsString({ each: true })
+    tags?:string[]
+
+
 
 
 }
