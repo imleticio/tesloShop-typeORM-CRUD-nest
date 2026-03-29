@@ -21,7 +21,7 @@ export class ProductsController {
 
   @Get(':term')
   findOne(@Param('term') term: string) {
-    return this.productsService.findOne(term);
+    return this.productsService.findOnePlain(term);
   }
 
   @Patch(':id')
@@ -36,4 +36,6 @@ export class ProductsController {
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.productsService.remove(id);
   }
+  
+  
 }
