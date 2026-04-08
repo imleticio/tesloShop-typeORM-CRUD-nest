@@ -1,5 +1,5 @@
 import { IsArray, IsBoolean, IsEmail, IsString, IsUUID, Min } from "class-validator";
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { BeforeInsert, Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 
 
 @Entity('users')
@@ -14,7 +14,9 @@ export class User {
     })
     email:string;
 
-    @Column('text')
+    @Column('text' , {
+        select: false 
+    })
     password:string;
 
     @Column('text')
@@ -31,6 +33,15 @@ export class User {
     })
     roles:string[];
 
+    @BeforeInsert()
+    checkFieldsBeforeInsert(){
+        this.email = this.email.toLocaleLowerCase().trim()
+    }
+
+    @BeforeInsert()
+    checkFieldsBeforeUpdate(){
+        this.checkFieldsBeforeInsert()
+    }
 
 
 }
