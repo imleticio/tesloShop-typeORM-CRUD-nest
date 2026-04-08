@@ -35,7 +35,7 @@ export class AuthService {
 
      return {
       ...user,
-      token:this.getJwToken({email: user.email})
+      token:this.getJwToken({id: user.email})
     }
 
     } catch (error) {
@@ -59,7 +59,7 @@ export class AuthService {
 
     return {
       ...user,
-      token:this.getJwToken({email: user.email})
+      token:this.getJwToken({id: user.id})
     }
 
   }
