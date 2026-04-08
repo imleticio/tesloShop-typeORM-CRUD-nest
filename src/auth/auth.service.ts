@@ -1,10 +1,13 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm';
 import { User } from './entities';
 import * as bcrypt  from 'bcrypt';
+import { LoginUserDto } from './dto';
+import { JwtPayload } from './interfaces/jwt-payload.interface';
+import { JwtService } from '@nestjs/jwt';
+import { runInThisContext } from 'node:vm';
 
 
 
@@ -13,7 +16,9 @@ export class AuthService {
 
   constructor(
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>
+    private readonly userRepository: Repository<User>,
+
+    private readonly jwtService:JwtService
   ) { }
 
   async create(createUserDto: CreateUserDto) {
@@ -28,15 +33,44 @@ export class AuthService {
       await this.userRepository.save(user)
       delete user.password
 
-      return user;
+     return {
+      ...user,
+      token:this.getJwToken({id: user.email})
+    }
 
     } catch (error) {
 
       this.handleDBError(error)
     }
 
+  }
+
+  async login(loginUserDto:LoginUserDto){
+    
+    const {password, email} = loginUserDto;
+    const user = await this.userRepository.findOne({
+      where: {email: email.toLocaleLowerCase()},
+      select: {email:true, password: true , id:true}
+    })
+    if(!user)
+        throw new UnauthorizedException('Credentials are not valid (email)')
+    if(!bcrypt.compareSync(password , user.password))
+        throw new UnauthorizedException('Credentials are not valid (password)')
+
+    return {
+      ...user,
+      token:this.getJwToken({id: user.id})
+    }
 
   }
+
+  private getJwToken(payload: JwtPayload){
+    //generar el token 
+
+      const token = this.jwtService.sign(payload);
+      return token;
+  }
+
 
   private handleDBError(error: any):never {
     if (error.code = '23505')
